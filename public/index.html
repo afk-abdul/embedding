@@ -14,13 +14,7 @@
     min-height: 100vh;
     padding: 1.5rem 1rem;
   }
-  h1 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: #fff;
-    margin-bottom: 0.25rem;
-  }
+  h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.04em; color: #fff; margin-bottom: 0.25rem; }
   .sub { font-size: 0.8rem; color: #666; margin-bottom: 1.5rem; }
 
   #drop-zone {
@@ -38,30 +32,84 @@
   #drop-zone p { font-size: 0.95rem; color: #aaa; }
   #drop-zone span { font-size: 0.78rem; color: #555; }
 
-  .meta-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 1.25rem;
-  }
-  .meta-card {
-    background: #181818;
-    border: 0.5px solid #282828;
-    border-radius: 10px;
-    padding: 0.65rem 0.85rem;
-  }
-  .meta-card label { font-size: 0.7rem; color: #555; display: block; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
-  .meta-card span { font-size: 0.85rem; color: #ccc; font-weight: 500; word-break: break-all; }
-
-  .style-row {
+  .section {
     background: #181818;
     border: 0.5px solid #282828;
     border-radius: 10px;
     padding: 0.85rem 1rem;
     margin-bottom: 1.25rem;
   }
-  .style-row p { font-size: 0.75rem; color: #555; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.6rem; }
-  .opts { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 0.6rem; }
+  .section-title {
+    font-size: 0.7rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title span {
+    background: #222;
+    color: #666;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .field-grid .full { grid-column: span 2; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field label {
+    font-size: 0.68rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .field input {
+    background: #111;
+    border: 0.5px solid #2a2a2a;
+    border-radius: 6px;
+    color: #ddd;
+    font-size: 0.82rem;
+    padding: 0.45rem 0.6rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: monospace;
+  }
+  .field input:focus { border-color: #555; }
+  .field input.from-exif { border-color: #2a3d2a; color: #7ec87e; }
+  .field input.fallback { border-color: #3d3020; color: #b8a06a; }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    margin-top: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.68rem;
+    color: #555;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.exif { background: #4a8a4a; }
+  .dot.fallback { background: #7a5a2a; }
+
+  .opts { display: flex; gap: 12px; flex-wrap: wrap; }
   .opts label { font-size: 0.82rem; color: #aaa; display: flex; align-items: center; gap: 5px; cursor: pointer; }
   .opts input[type=radio] { accent-color: #888; }
 
@@ -111,23 +159,50 @@
 
 <div id="panel">
 
-  <div class="meta-grid">
-    <div class="meta-card"><label>Latitude</label><span id="m-lat">—</span></div>
-    <div class="meta-card"><label>Longitude</label><span id="m-lon">—</span></div>
-    <div class="meta-card"><label>Elevation</label><span id="m-ele">—</span></div>
-    <div class="meta-card"><label>Accuracy</label><span id="m-acc">—</span></div>
-    <div class="meta-card" style="grid-column: span 2"><label>Date &amp; Time</label><span id="m-dt">—</span></div>
+  <!-- Editable metrics -->
+  <div class="section">
+    <div class="section-title">
+      Stamp fields — edit if needed
+      <span>tap any field to override</span>
+    </div>
+    <div class="field-grid">
+      <div class="field">
+        <label>Latitude</label>
+        <input type="text" id="f-lat" placeholder="34.112833">
+      </div>
+      <div class="field">
+        <label>Longitude</label>
+        <input type="text" id="f-lon" placeholder="72.515528">
+      </div>
+      <div class="field">
+        <label>Elevation</label>
+        <input type="text" id="f-ele" placeholder="331.56±77.27 m">
+      </div>
+      <div class="field">
+        <label>Accuracy</label>
+        <input type="text" id="f-acc" placeholder="14.66 m">
+      </div>
+      <div class="field full">
+        <label>Time</label>
+        <input type="text" id="f-dt" placeholder="05-24-2026 17:40:30">
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="dot exif"></div> Read from EXIF</div>
+      <div class="legend-item"><div class="dot fallback"></div> Default fallback</div>
+    </div>
   </div>
 
-  <div class="style-row">
-    <p>Position</p>
-    <div class="opts">
+  <!-- Position & size -->
+  <div class="section">
+    <div class="section-title">Position</div>
+    <div class="opts" style="margin-bottom: 0.75rem;">
       <label><input type="radio" name="corner" value="bl" checked> Bottom left</label>
       <label><input type="radio" name="corner" value="br"> Bottom right</label>
       <label><input type="radio" name="corner" value="tl"> Top left</label>
       <label><input type="radio" name="corner" value="tr"> Top right</label>
     </div>
-    <p style="margin-top:0.5rem">Font size</p>
+    <div class="section-title" style="margin-top: 0.5rem;">Font size</div>
     <div class="opts">
       <label><input type="radio" name="fsize" value="small"> Small</label>
       <label><input type="radio" name="fsize" value="medium" checked> Medium</label>
@@ -143,8 +218,26 @@
 </div>
 
 <script>
+// Default fallback values from reference image
+function getNowStamp() {
+  const n = new Date();
+  const mm = String(n.getMonth()+1).padStart(2,'0');
+  const dd = String(n.getDate()).padStart(2,'0');
+  const yyyy = n.getFullYear();
+  const hh = String(n.getHours()).padStart(2,'0');
+  const min = String(n.getMinutes()).padStart(2,'0');
+  const ss = String(n.getSeconds()).padStart(2,'0');
+  return `${mm}-${dd}-${yyyy} ${hh}:${min}:${ss}`;
+}
+const DEFAULTS = {
+  lat: '34.112833',
+  lon: '72.515528',
+  ele: '331.56±77.27 m',
+  acc: '14.66 m',
+  dt: getNowStamp()
+};
+
 let imgDataURL = null;
-let metaObj = {};
 
 function dms(arr, ref) {
   if (!arr || arr.length < 3) return null;
@@ -155,11 +248,17 @@ function dms(arr, ref) {
 
 function parseDate(str) {
   if (!str) return null;
-  // "2026:05:24 17:40:30" → "05-24-2026 17:40:30"
   const [datePart, timePart] = str.split(' ');
   if (!datePart) return null;
   const [y, m, d] = datePart.split(':');
   return `${m}-${d}-${y} ${timePart || ''}`.trim();
+}
+
+function setField(id, value, fromExif) {
+  const el = document.getElementById(id);
+  el.value = value;
+  el.classList.remove('from-exif', 'fallback');
+  el.classList.add(fromExif ? 'from-exif' : 'fallback');
 }
 
 function redraw() {
@@ -175,16 +274,20 @@ function redraw() {
     const corner = document.querySelector('input[name="corner"]:checked').value;
     const fsizeKey = document.querySelector('input[name="fsize"]:checked').value;
 
-    // Build stamp lines matching the screenshot format exactly
-    const lines = [];
-    if (metaObj.lat != null) lines.push(`Latitude: ${metaObj.lat.toFixed(6)}`);
-    if (metaObj.lon != null) lines.push(`Longitude: ${metaObj.lon.toFixed(6)}`);
-    if (metaObj.ele != null) lines.push(`Elevation: ${metaObj.ele.toFixed(2)}±77.27 m`);
-    lines.push(`Accuracy: 14.66 m`);
-    if (metaObj.dt)  lines.push(`Time: ${metaObj.dt}`);
-    if (!lines.length) { lines.push('No metadata found'); }
+    const lat = document.getElementById('f-lat').value.trim();
+    const lon = document.getElementById('f-lon').value.trim();
+    const ele = document.getElementById('f-ele').value.trim();
+    const acc = document.getElementById('f-acc').value.trim();
+    const dt  = document.getElementById('f-dt').value.trim();
 
-    // Scale font to image size
+    const lines = [];
+    if (lat) lines.push(`Latitude: ${lat}`);
+    if (lon) lines.push(`Longitude: ${lon}`);
+    if (ele) lines.push(`Elevation: ${ele}`);
+    if (acc) lines.push(`Accuracy: ${acc}`);
+    if (dt)  lines.push(`Time: ${dt}`);
+    if (!lines.length) return;
+
     const base = { small: 18, medium: 26, large: 36 }[fsizeKey];
     const scale = img.width / 1000;
     const fs = Math.round(base * Math.max(scale, 0.6));
@@ -198,19 +301,17 @@ function redraw() {
 
     let bx, by;
     const margin = pad;
-    if (corner === 'bl') { bx = margin; by = img.height - boxH - margin; }
-    else if (corner === 'br') { bx = img.width - boxW - margin; by = img.height - boxH - margin; }
-    else if (corner === 'tl') { bx = margin; by = margin; }
-    else { bx = img.width - boxW - margin; by = margin; }
+    if (corner === 'bl') { bx = 0; by = img.height - boxH; }
+    else if (corner === 'br') { bx = img.width - boxW; by = img.height - boxH; }
+    else if (corner === 'tl') { bx = 0; by = 0; }
+    else { bx = img.width - boxW; by = 0; }
 
-    // Black semi-transparent box like the screenshot
-    ctx.fillStyle = 'rgba(0,0,0,0.62)';
-    ctx.beginPath();
-    ctx.rect(bx, by, boxW, boxH);
-    ctx.fill();
+    // Beige background at 10% opacity
+    ctx.fillStyle = 'rgba(245, 245, 220, 0.10)';
+    ctx.fillRect(bx, by, boxW, boxH);
 
-    // White monospace text
-    ctx.fillStyle = '#ffffff';
+    // Black text
+    ctx.fillStyle = '#000000';
     ctx.font = `${fs}px monospace`;
     lines.forEach((line, i) => {
       ctx.fillText(line, bx + pad, by + pad * 0.75 + fs + i * lineH);
@@ -224,7 +325,13 @@ function handleFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
     imgDataURL = e.target.result;
-    metaObj = {};
+
+    // Reset all fields to fallback first
+    setField('f-lat', DEFAULTS.lat, false);
+    setField('f-lon', DEFAULTS.lon, false);
+    setField('f-ele', DEFAULTS.ele, false);
+    setField('f-acc', DEFAULTS.acc, false);
+    setField('f-dt',  DEFAULTS.dt,  false);
 
     const tmpImg = new Image();
     tmpImg.onload = () => {
@@ -233,25 +340,23 @@ function handleFile(file) {
 
         const lat = dms(tags.GPSLatitude, tags.GPSLatitudeRef);
         const lon = dms(tags.GPSLongitude, tags.GPSLongitudeRef);
-        metaObj.lat = lat;
-        metaObj.lon = lon;
-        document.getElementById('m-lat').textContent = lat != null ? lat.toFixed(6) : 'No GPS';
-        document.getElementById('m-lon').textContent = lon != null ? lon.toFixed(6) : 'No GPS';
+        if (lat != null) setField('f-lat', lat.toFixed(6), true);
+        if (lon != null) setField('f-lon', lon.toFixed(6), true);
 
-        // Elevation from GPSAltitude
-        const ele = tags.GPSAltitude;
-        if (ele != null) {
-          metaObj.ele = typeof ele === 'object' ? ele.numerator / ele.denominator : ele;
-          document.getElementById('m-ele').textContent = metaObj.ele.toFixed(2) + ' m';
-        } else {
-          document.getElementById('m-ele').textContent = 'Not found';
+        const eleRaw = tags.GPSAltitude;
+        if (eleRaw != null) {
+          const eleVal = typeof eleRaw === 'object' ? eleRaw.numerator / eleRaw.denominator : eleRaw;
+          setField('f-ele', eleVal.toFixed(2) + '±77.27 m', true);
         }
 
-        document.getElementById('m-acc').textContent = '~14.66 m (GPS est.)';
+        const hpe = tags.GPSHPositioningError || tags.GPSDop;
+        if (hpe != null) {
+          const hpeVal = typeof hpe === 'object' ? hpe.numerator / hpe.denominator : hpe;
+          setField('f-acc', hpeVal.toFixed(2) + ' m', true);
+        }
 
         const dt = parseDate(tags.DateTimeOriginal || tags.DateTime);
-        metaObj.dt = dt;
-        document.getElementById('m-dt').textContent = dt || 'Not found';
+        if (dt) setField('f-dt', dt, true);
 
         document.getElementById('panel').style.display = 'block';
         redraw();
@@ -269,14 +374,24 @@ dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dra
 dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
 dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
 
+// Redraw on any option or field change
 document.querySelectorAll('input[name="corner"], input[name="fsize"]').forEach(el => el.addEventListener('change', redraw));
+['f-lat','f-lon','f-ele','f-acc','f-dt'].forEach(id => {
+  document.getElementById(id).addEventListener('input', redraw);
+});
 
 document.getElementById('download-btn').addEventListener('click', () => {
   const canvas = document.getElementById('preview-canvas');
-  const a = document.createElement('a');
-  a.download = 'stamped.jpg';
-  a.href = canvas.toDataURL('image/jpeg', 0.95);
-  a.click();
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'stamped.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/jpeg', 0.95);
 });
 </script>
 </body>
