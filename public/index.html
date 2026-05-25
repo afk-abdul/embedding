@@ -1,483 +1,1288 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Photo Stamper</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #0f0f0f;
-    color: #e0e0e0;
-    min-height: 100vh;
-    padding: 1.5rem 1rem;
-  }
-  h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.04em; color: #fff; margin-bottom: 0.25rem; }
-  .sub { font-size: 0.8rem; color: #666; margin-bottom: 1.5rem; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Photo Stamper - Batch</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #0f0f0f;
+        color: #e0e0e0;
+        min-height: 100vh;
+        padding: 1.5rem 1rem;
+      }
+      h1 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: #fff;
+        margin-bottom: 0.25rem;
+      }
+      .sub {
+        font-size: 0.8rem;
+        color: #666;
+        margin-bottom: 1.5rem;
+      }
+      .file-count {
+        display: inline-block;
+        background: #222;
+        color: #7ec87e;
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-left: 8px;
+      }
 
-  #drop-zone {
-    border: 1.5px dashed #333;
-    border-radius: 12px;
-    padding: 2.5rem 1rem;
-    text-align: center;
-    cursor: pointer;
-    background: #181818;
-    transition: border-color 0.2s, background 0.2s;
-    margin-bottom: 1.25rem;
-  }
-  #drop-zone:hover, #drop-zone.drag { border-color: #555; background: #1f1f1f; }
-  #drop-zone svg { margin-bottom: 0.75rem; }
-  #drop-zone p { font-size: 0.95rem; color: #aaa; }
-  #drop-zone span { font-size: 0.78rem; color: #555; }
+      #drop-zone {
+        border: 1.5px dashed #333;
+        border-radius: 12px;
+        padding: 2.5rem 1rem;
+        text-align: center;
+        cursor: pointer;
+        background: #181818;
+        transition:
+          border-color 0.2s,
+          background 0.2s;
+        margin-bottom: 1.25rem;
+      }
+      #drop-zone:hover,
+      #drop-zone.drag {
+        border-color: #555;
+        background: #1f1f1f;
+      }
+      #drop-zone svg {
+        margin-bottom: 0.75rem;
+      }
+      #drop-zone p {
+        font-size: 0.95rem;
+        color: #aaa;
+      }
+      #drop-zone span {
+        font-size: 0.78rem;
+        color: #555;
+      }
 
-  .section {
-    background: #181818;
-    border: 0.5px solid #282828;
-    border-radius: 10px;
-    padding: 0.85rem 1rem;
-    margin-bottom: 1.25rem;
-  }
-  .section-title {
-    font-size: 0.7rem;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .section-title span {
-    background: #222;
-    color: #666;
-    font-size: 0.6rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    letter-spacing: 0.04em;
-  }
+      .section {
+        background: #181818;
+        border: 0.5px solid #282828;
+        border-radius: 10px;
+        padding: 0.85rem 1rem;
+        margin-bottom: 1.25rem;
+      }
+      .section-title {
+        font-size: 0.7rem;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .section-title span {
+        background: #222;
+        color: #666;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        letter-spacing: 0.04em;
+      }
 
-  .field-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .field-grid .full { grid-column: span 2; }
+      /* Gallery Carousel */
+      .gallery-section {
+        background: #181818;
+        border: 0.5px solid #282828;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1.25rem;
+      }
+      .gallery-header {
+        font-size: 0.7rem;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.75rem;
+      }
+      .gallery-nav {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .gallery-nav button {
+        background: #222;
+        border: 0.5px solid #2a2a2a;
+        color: #aaa;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.8rem;
+      }
+      .gallery-nav button:hover {
+        background: #2a2a2a;
+        color: #ddd;
+      }
+      .gallery-nav button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .gallery-nav span {
+        font-size: 0.75rem;
+        color: #666;
+      }
+      .gallery-thumbs {
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+      }
+      .gallery-thumbs::-webkit-scrollbar {
+        height: 4px;
+      }
+      .gallery-thumbs::-webkit-scrollbar-track {
+        background: #111;
+      }
+      .gallery-thumbs::-webkit-scrollbar-thumb {
+        background: #444;
+        border-radius: 2px;
+      }
+      .thumb {
+        flex-shrink: 0;
+        width: 60px;
+        height: 60px;
+        border: 2px solid #2a2a2a;
+        border-radius: 6px;
+        cursor: pointer;
+        background: #111;
+        overflow: hidden;
+        transition: border-color 0.15s;
+      }
+      .thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .thumb.selected {
+        border-color: #7ec87e;
+      }
+      .thumb:hover {
+        border-color: #444;
+      }
 
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .field label {
-    font-size: 0.68rem;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .field input {
-    background: #111;
-    border: 0.5px solid #2a2a2a;
-    border-radius: 6px;
-    color: #ddd;
-    font-size: 0.82rem;
-    padding: 0.45rem 0.6rem;
-    width: 100%;
-    outline: none;
-    transition: border-color 0.15s;
-    font-family: monospace;
-  }
-  .field input:focus { border-color: #555; }
-  .field input.from-exif { border-color: #2a3d2a; color: #7ec87e; }
-  .field input.fallback { border-color: #3d3020; color: #b8a06a; }
+      .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .field-grid .full {
+        grid-column: span 2;
+      }
 
-  .legend {
-    display: flex;
-    gap: 12px;
-    margin-top: 0.6rem;
-    flex-wrap: wrap;
-  }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.68rem;
-    color: #555;
-  }
-  .dot { width: 8px; height: 8px; border-radius: 50%; }
-  .dot.exif { background: #4a8a4a; }
-  .dot.fallback { background: #7a5a2a; }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .field label {
+        font-size: 0.68rem;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .field-input-group {
+        display: flex;
+        gap: 4px;
+      }
+      .field input {
+        flex: 1;
+        background: #111;
+        border: 0.5px solid #2a2a2a;
+        border-radius: 6px;
+        color: #ddd;
+        font-size: 0.82rem;
+        padding: 0.45rem 0.6rem;
+        outline: none;
+        transition: border-color 0.15s;
+        font-family: monospace;
+      }
+      .field input:focus {
+        border-color: #555;
+      }
+      .field input.from-exif {
+        border-color: #2a3d2a;
+        color: #7ec87e;
+      }
+      .field input.fallback {
+        border-color: #3d3020;
+        color: #b8a06a;
+      }
+      .field input.with-noise {
+        border-color: #3d3020;
+        color: #d4a574;
+      }
+      .reset-btn {
+        background: #222;
+        border: 0.5px solid #2a2a2a;
+        color: #aaa;
+        padding: 0.45rem 0.6rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        min-width: 40px;
+      }
+      .reset-btn:hover {
+        background: #2a2a2a;
+        color: #ddd;
+      }
 
-  .opts { display: flex; gap: 12px; flex-wrap: wrap; }
-  .opts label { font-size: 0.82rem; color: #aaa; display: flex; align-items: center; gap: 5px; cursor: pointer; }
-  .opts input[type=radio] { accent-color: #888; }
+      .legend {
+        display: flex;
+        gap: 12px;
+        margin-top: 0.6rem;
+        flex-wrap: wrap;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.68rem;
+        color: #555;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .dot.exif {
+        background: #4a8a4a;
+      }
+      .dot.fallback {
+        background: #7a5a2a;
+      }
+      .dot.noise {
+        background: #8a7a2a;
+      }
 
-  .preview-wrap {
-    background: #111;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 180px;
-  }
-  #preview-canvas { max-width: 100%; display: block; }
+      .opts {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .opts label {
+        font-size: 0.82rem;
+        color: #aaa;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+      }
+      .opts input[type="radio"] {
+        accent-color: #888;
+      }
 
-  .btn {
-    width: 100%;
-    padding: 0.8rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: opacity 0.15s;
-    margin-bottom: 0.6rem;
-    display: block;
-  }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-white { background: #fff; color: #111; }
-  .btn-white:not(:disabled):hover { background: #ddd; }
-  .btn-whatsapp { background: #25D366; color: #fff; }
-  .btn-whatsapp:not(:disabled):hover { background: #1ebe5d; }
-  .btn-note {
-    font-size: 0.7rem;
-    color: #444;
-    text-align: center;
-    margin-top: -0.3rem;
-    margin-bottom: 0.6rem;
-  }
+      .preview-wrap {
+        background: #111;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 180px;
+      }
+      #preview-canvas {
+        max-width: 100%;
+        display: block;
+      }
 
-  #panel { display: none; }
-</style>
-</head>
-<body>
+      .btn {
+        width: 100%;
+        padding: 0.8rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: opacity 0.15s;
+        margin-bottom: 0.6rem;
+        display: block;
+      }
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .btn-white {
+        background: #fff;
+        color: #111;
+      }
+      .btn-white:not(:disabled):hover {
+        background: #ddd;
+      }
+      .btn-secondary {
+        background: #2a2a2a;
+        color: #ddd;
+      }
+      .btn-secondary:not(:disabled):hover {
+        background: #333;
+      }
+      .btn-whatsapp {
+        background: #25d366;
+        color: #fff;
+      }
+      .btn-whatsapp:not(:disabled):hover {
+        background: #1ebe5d;
+      }
+      .btn-note {
+        font-size: 0.7rem;
+        color: #444;
+        text-align: center;
+        margin-top: -0.3rem;
+        margin-bottom: 0.6rem;
+      }
 
-<h1>📷 Photo Stamper</h1>
-<p class="sub">Embeds GPS, elevation, date & time from EXIF metadata</p>
+      .batch-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem;
+        margin-bottom: 1.25rem;
+      }
+      .batch-controls .btn {
+        margin-bottom: 0;
+      }
 
-<div id="drop-zone" onclick="document.getElementById('file-input').click()">
-  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-    <circle cx="12" cy="13" r="4"/>
-  </svg>
-  <p>Tap to pick a photo</p>
-  <span>JPEG · HEIC · PNG</span>
-</div>
-<input type="file" id="file-input" accept="image/*" style="display:none">
+      #panel {
+        display: none;
+      }
+      #processing {
+        display: none;
+        text-align: center;
+        padding: 1rem;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>
+      📷 Photo Stamper
+      <span class="file-count" id="file-count" style="display: none"
+        >0 images</span
+      >
+    </h1>
+    <p class="sub">
+      Embeds GPS, elevation, date & time from EXIF metadata into multiple photos
+    </p>
 
-<div id="panel">
-
-  <div class="section">
-    <div class="section-title">
-      Stamp fields — edit if needed
-      <span>tap any field to override</span>
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <svg
+        width="36"
+        height="36"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#444"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path
+          d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"
+        />
+        <circle cx="12" cy="13" r="4" />
+      </svg>
+      <p>Tap to pick multiple photos</p>
+      <span>JPEG · HEIC · PNG</span>
     </div>
-    <div class="field-grid">
-      <div class="field">
-        <label>Latitude</label>
-        <input type="text" id="f-lat" placeholder="34.112833">
-      </div>
-      <div class="field">
-        <label>Longitude</label>
-        <input type="text" id="f-lon" placeholder="72.515528">
-      </div>
-      <div class="field">
-        <label>Elevation</label>
-        <input type="text" id="f-ele" placeholder="331.56±77.27 m">
-      </div>
-      <div class="field">
-        <label>Accuracy</label>
-        <input type="text" id="f-acc" placeholder="14.66 m">
-      </div>
-      <div class="field full">
-        <label>Time</label>
-        <input type="text" id="f-dt" placeholder="05-24-2026 17:40:30">
-      </div>
+    <input
+      type="file"
+      id="file-input"
+      accept="image/*"
+      multiple
+      style="display: none"
+    />
+
+    <div id="processing">
+      <p>Processing images... <span id="process-count">0/0</span></p>
     </div>
-    <div class="legend">
-      <div class="legend-item"><div class="dot exif"></div> Read from EXIF</div>
-      <div class="legend-item"><div class="dot fallback"></div> Default fallback</div>
+
+    <div id="panel">
+      <!-- Gallery Carousel -->
+      <div class="gallery-section">
+        <div class="gallery-header">Image Gallery</div>
+        <div class="gallery-nav">
+          <button id="prev-btn" onclick="prevImage()">← Prev</button>
+          <span id="image-indicator">1/1</span>
+          <button id="next-btn" onclick="nextImage()">Next →</button>
+        </div>
+        <div class="gallery-thumbs" id="gallery-thumbs"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          Stamp fields — edit if needed
+          <span>tap any field to override</span>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Latitude</label>
+            <div class="field-input-group">
+              <input type="text" id="f-lat" placeholder="34.112833" />
+              <button class="reset-btn" onclick="resetField('f-lat')">↻</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Longitude</label>
+            <div class="field-input-group">
+              <input type="text" id="f-lon" placeholder="72.515528" />
+              <button class="reset-btn" onclick="resetField('f-lon')">↻</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Elevation</label>
+            <div class="field-input-group">
+              <input type="text" id="f-ele" placeholder="331.56±77.27 m" />
+              <button class="reset-btn" onclick="resetField('f-ele')">↻</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Accuracy</label>
+            <div class="field-input-group">
+              <input type="text" id="f-acc" placeholder="14.66 m" />
+              <button class="reset-btn" onclick="resetField('f-acc')">↻</button>
+            </div>
+          </div>
+          <div class="field full">
+            <label>Time</label>
+            <div class="field-input-group">
+              <input type="text" id="f-dt" placeholder="05-24-2026 17:40:30" />
+              <button class="reset-btn" onclick="resetField('f-dt')">↻</button>
+            </div>
+          </div>
+        </div>
+        <div class="legend">
+          <div class="legend-item">
+            <div class="dot exif"></div>
+            From EXIF
+          </div>
+          <div class="legend-item">
+            <div class="dot fallback"></div>
+            Default fallback
+          </div>
+          <div class="legend-item">
+            <div class="dot noise"></div>
+            Generated with noise
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Position</div>
+        <div class="opts" style="margin-bottom: 0.75rem">
+          <label
+            ><input type="radio" name="corner" value="bl" checked /> Bottom
+            left</label
+          >
+          <label
+            ><input type="radio" name="corner" value="br" /> Bottom right</label
+          >
+          <label
+            ><input type="radio" name="corner" value="tl" /> Top left</label
+          >
+          <label
+            ><input type="radio" name="corner" value="tr" /> Top right</label
+          >
+        </div>
+        <div class="section-title" style="margin-top: 0.5rem">Font size</div>
+        <div class="opts">
+          <label><input type="radio" name="fsize" value="small" /> Small</label>
+          <label
+            ><input type="radio" name="fsize" value="medium" checked />
+            Medium</label
+          >
+          <label><input type="radio" name="fsize" value="large" /> Large</label>
+        </div>
+      </div>
+
+      <div class="preview-wrap">
+        <canvas id="preview-canvas"></canvas>
+      </div>
+
+      <div class="batch-controls">
+        <button class="btn btn-white" id="download-btn">
+          ⬇ Download Selected
+        </button>
+        <button class="btn btn-secondary" id="download-all-btn">
+          ⬇ Download All
+        </button>
+      </div>
+
+      <button class="btn btn-whatsapp" id="share-btn">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style="vertical-align: -3px; margin-right: 6px"
+        >
+          <path
+            d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"
+          />
+          <path
+            d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.534 5.858L.057 23.448a.5.5 0 00.609.61l5.703-1.498A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22a9.955 9.955 0 01-5.127-1.416l-.368-.219-3.818 1.003 1.018-3.714-.24-.381A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"
+          />
+        </svg>
+        <span id="share-label">Share All to WhatsApp</span>
+      </button>
+      <p class="btn-note" id="share-note"></p>
+
+      <button
+        class="btn btn-secondary"
+        id="clear-btn"
+        style="margin-top: 0.6rem"
+      >
+        🗑 Clear All
+      </button>
     </div>
-  </div>
 
-  <div class="section">
-    <div class="section-title">Position</div>
-    <div class="opts" style="margin-bottom: 0.75rem;">
-      <label><input type="radio" name="corner" value="bl" checked> Bottom left</label>
-      <label><input type="radio" name="corner" value="br"> Bottom right</label>
-      <label><input type="radio" name="corner" value="tl"> Top left</label>
-      <label><input type="radio" name="corner" value="tr"> Top right</label>
-    </div>
-    <div class="section-title" style="margin-top: 0.5rem;">Font size</div>
-    <div class="opts">
-      <label><input type="radio" name="fsize" value="small"> Small</label>
-      <label><input type="radio" name="fsize" value="medium" checked> Medium</label>
-      <label><input type="radio" name="fsize" value="large"> Large</label>
-    </div>
-  </div>
+    <script>
+      function getNowStamp() {
+        const n = new Date();
+        const mm = String(n.getMonth() + 1).padStart(2, "0");
+        const dd = String(n.getDate()).padStart(2, "0");
+        const yyyy = n.getFullYear();
+        const hh = String(n.getHours()).padStart(2, "0");
+        const min = String(n.getMinutes()).padStart(2, "0");
+        const ss = String(n.getSeconds()).padStart(2, "0");
+        return `${mm}-${dd}-${yyyy} ${hh}:${min}:${ss}`;
+      }
 
-  <div class="preview-wrap">
-    <canvas id="preview-canvas"></canvas>
-  </div>
+      const DEFAULTS = {
+        lat: "34.112833",
+        lon: "72.515528",
+        ele: "331.56±77.27 m",
+        acc: "14.66 m",
+        dt: getNowStamp(),
+      };
 
-  <button class="btn btn-white" id="download-btn">⬇ Download Stamped Photo</button>
-  <button class="btn btn-whatsapp" id="share-btn">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px; margin-right:6px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.534 5.858L.057 23.448a.5.5 0 00.609.61l5.703-1.498A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22a9.955 9.955 0 01-5.127-1.416l-.368-.219-3.818 1.003 1.018-3.714-.24-.381A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-    <span id="share-label">Share via WhatsApp</span>
-  </button>
-  <p class="btn-note" id="share-note"></p>
+      // Image stamps storage
+      let imageStamps = [];
+      let currentImageIndex = 0;
 
-</div>
+      // State for each image
+      const imageState = {
+        originalMetadata: {},
+        appliedMetadata: {},
+      };
 
-<script>
-function getNowStamp() {
-  const n = new Date();
-  const mm = String(n.getMonth()+1).padStart(2,'0');
-  const dd = String(n.getDate()).padStart(2,'0');
-  const yyyy = n.getFullYear();
-  const hh = String(n.getHours()).padStart(2,'0');
-  const min = String(n.getMinutes()).padStart(2,'0');
-  const ss = String(n.getSeconds()).padStart(2,'0');
-  return `${mm}-${dd}-${yyyy} ${hh}:${min}:${ss}`;
-}
+      function dms(arr, ref) {
+        if (!arr || arr.length < 3) return null;
+        let d = arr[0] + arr[1] / 60 + arr[2] / 3600;
+        if (ref === "S" || ref === "W") d = -d;
+        return d;
+      }
 
-const DEFAULTS = {
-  lat: '34.112833',
-  lon: '72.515528',
-  ele: '331.56±77.27 m',
-  acc: '14.66 m',
-  dt: getNowStamp()
-};
+      function parseDate(str) {
+        if (!str) return null;
+        const [datePart, timePart] = str.split(" ");
+        if (!datePart) return null;
+        const [y, m, d] = datePart.split(":");
+        return `${m}-${d}-${y} ${timePart || ""}`.trim();
+      }
 
-let imgDataURL = null;
-let currentFilename = 'stamped.jpg';
+      // Generate unique random noise
+      function generateNoise(type) {
+        if (type === "location") {
+          const noise = (Math.random() - 0.5) * 0.0002; // ±0.0001
+          return noise;
+        } else if (type === "time") {
+          const seconds = Math.floor((Math.random() - 0.5) * 60); // ±30 seconds
+          return seconds;
+        }
+        return 0;
+      }
 
-function dms(arr, ref) {
-  if (!arr || arr.length < 3) return null;
-  let d = arr[0] + arr[1]/60 + arr[2]/3600;
-  if (ref === 'S' || ref === 'W') d = -d;
-  return d;
-}
+      // Apply noise to time string
+      function applyTimeNoise(timeStr, noiseSeconds) {
+        const [date, time] = timeStr.split(" ");
+        if (!time) return timeStr;
+        const [hh, mm, ss] = time.split(":");
+        let seconds = parseInt(ss) + noiseSeconds;
+        let minutes = parseInt(mm);
+        let hours = parseInt(hh);
 
-function parseDate(str) {
-  if (!str) return null;
-  const [datePart, timePart] = str.split(' ');
-  if (!datePart) return null;
-  const [y, m, d] = datePart.split(':');
-  return `${m}-${d}-${y} ${timePart || ''}`.trim();
-}
+        if (seconds < 0) {
+          seconds += 60;
+          minutes--;
+        }
+        if (seconds > 59) {
+          seconds -= 60;
+          minutes++;
+        }
+        if (minutes < 0) {
+          minutes += 60;
+          hours--;
+        }
+        if (minutes > 59) {
+          minutes -= 60;
+          hours++;
+        }
+        if (hours < 0) hours += 24;
+        if (hours > 23) hours -= 24;
 
-function setField(id, value, fromExif) {
-  const el = document.getElementById(id);
-  el.value = value;
-  el.classList.remove('from-exif', 'fallback');
-  el.classList.add(fromExif ? 'from-exif' : 'fallback');
-}
+        return `${date} ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      }
 
-// Detect mobile vs desktop share capability
-const canNativeShare = !!(navigator.share && navigator.canShare);
+      function setField(id, value, fromExif, hasNoise = false) {
+        const el = document.getElementById(id);
+        el.value = value;
+        el.classList.remove("from-exif", "fallback", "with-noise");
+        if (fromExif) {
+          el.classList.add("from-exif");
+        } else if (hasNoise) {
+          el.classList.add("with-noise");
+        } else {
+          el.classList.add("fallback");
+        }
+      }
 
-function updateShareUI() {
-  const note = document.getElementById('share-note');
-  if (canNativeShare) {
-    document.getElementById('share-label').textContent = 'Share via WhatsApp / other';
-    note.textContent = 'Opens your share sheet — pick WhatsApp, then choose a contact';
-  } else {
-    document.getElementById('share-label').textContent = 'Download + Open WhatsApp Web';
-    note.textContent = 'Saves the photo, then opens WhatsApp Web — drag the file into any chat';
-  }
-}
+      function resetField(id) {
+        const stamp = imageStamps[currentImageIndex];
+        if (!stamp) return;
 
-function redraw() {
-  if (!imgDataURL) return;
-  const canvas = document.getElementById('preview-canvas');
-  const ctx = canvas.getContext('2d');
-  const img = new Image();
-  img.onload = () => {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
+        let metadata = stamp.metadata;
+        let value, fromExif, hasNoise;
 
-    const corner = document.querySelector('input[name="corner"]:checked').value;
-    const fsizeKey = document.querySelector('input[name="fsize"]:checked').value;
-
-    const lat = document.getElementById('f-lat').value.trim();
-    const lon = document.getElementById('f-lon').value.trim();
-    const ele = document.getElementById('f-ele').value.trim();
-    const acc = document.getElementById('f-acc').value.trim();
-    const dt  = document.getElementById('f-dt').value.trim();
-
-    const lines = [];
-    if (lat) lines.push(`Latitude: ${lat}`);
-    if (lon) lines.push(`Longitude: ${lon}`);
-    if (ele) lines.push(`Elevation: ${ele}`);
-    if (acc) lines.push(`Accuracy: ${acc}`);
-    if (dt)  lines.push(`Time: ${dt}`);
-    if (!lines.length) return;
-
-    const base = { small: 18, medium: 26, large: 36 }[fsizeKey];
-    const scale = img.width / 1000;
-    const fs = Math.round(base * Math.max(scale, 0.6));
-    const pad = Math.round(fs * 0.7);
-    const lineH = Math.round(fs * 1.55);
-
-    ctx.font = `${fs}px monospace`;
-    const maxW = lines.reduce((m, l) => Math.max(m, ctx.measureText(l).width), 0);
-    const boxW = maxW + pad * 2;
-    const boxH = lines.length * lineH + pad;
-
-    let bx, by;
-    if (corner === 'bl') { bx = 0; by = img.height - boxH; }
-    else if (corner === 'br') { bx = img.width - boxW; by = img.height - boxH; }
-    else if (corner === 'tl') { bx = 0; by = 0; }
-    else { bx = img.width - boxW; by = 0; }
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.68)';
-    ctx.fillRect(bx, by, boxW, boxH);
-
-    ctx.fillStyle = '#000000';
-    ctx.font = `${fs}px monospace`;
-    lines.forEach((line, i) => {
-      ctx.fillText(line, bx + pad, by + pad * 0.75 + fs + i * lineH);
-    });
-  };
-  img.src = imgDataURL;
-}
-
-// Returns a promise resolving to a File object from the canvas
-function getStampedFile() {
-  return new Promise((resolve, reject) => {
-    const canvas = document.getElementById('preview-canvas');
-    canvas.toBlob(blob => {
-      if (!blob) { reject(new Error('Canvas empty')); return; }
-      const file = new File([blob], currentFilename, { type: 'image/jpeg' });
-      resolve(file);
-    }, 'image/jpeg', 0.95);
-  });
-}
-
-function handleFile(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  currentFilename = file.name.replace(/\.[^.]+$/, '') + '_stamped.jpg';
-  const reader = new FileReader();
-  reader.onload = e => {
-    imgDataURL = e.target.result;
-
-    setField('f-lat', DEFAULTS.lat, false);
-    setField('f-lon', DEFAULTS.lon, false);
-    setField('f-ele', DEFAULTS.ele, false);
-    setField('f-acc', DEFAULTS.acc, false);
-    setField('f-dt',  DEFAULTS.dt,  false);
-
-    const tmpImg = new Image();
-    tmpImg.onload = () => {
-      EXIF.getData(tmpImg, function() {
-        const tags = EXIF.getAllTags(this);
-
-        const lat = dms(tags.GPSLatitude, tags.GPSLatitudeRef);
-        const lon = dms(tags.GPSLongitude, tags.GPSLongitudeRef);
-        if (lat != null) setField('f-lat', lat.toFixed(6), true);
-        if (lon != null) setField('f-lon', lon.toFixed(6), true);
-
-        const eleRaw = tags.GPSAltitude;
-        if (eleRaw != null) {
-          const eleVal = typeof eleRaw === 'object' ? eleRaw.numerator / eleRaw.denominator : eleRaw;
-          setField('f-ele', eleVal.toFixed(2) + '±77.27 m', true);
+        switch (id) {
+          case "f-lat":
+            value = metadata.lat.value;
+            fromExif = metadata.lat.fromExif;
+            hasNoise = metadata.lat.hasNoise;
+            break;
+          case "f-lon":
+            value = metadata.lon.value;
+            fromExif = metadata.lon.fromExif;
+            hasNoise = metadata.lon.hasNoise;
+            break;
+          case "f-ele":
+            value = metadata.ele.value;
+            fromExif = metadata.ele.fromExif;
+            hasNoise = metadata.ele.hasNoise;
+            break;
+          case "f-acc":
+            value = metadata.acc.value;
+            fromExif = metadata.acc.fromExif;
+            hasNoise = metadata.acc.hasNoise;
+            break;
+          case "f-dt":
+            value = metadata.dt.value;
+            fromExif = metadata.dt.fromExif;
+            hasNoise = metadata.dt.hasNoise;
+            break;
         }
 
-        const hpe = tags.GPSHPositioningError || tags.GPSDop;
-        if (hpe != null) {
-          const hpeVal = typeof hpe === 'object' ? hpe.numerator / hpe.denominator : hpe;
-          setField('f-acc', hpeVal.toFixed(2) + ' m', true);
-        }
-
-        const dt = parseDate(tags.DateTimeOriginal || tags.DateTime);
-        if (dt) setField('f-dt', dt, true);
-
-        document.getElementById('panel').style.display = 'block';
-        updateShareUI();
+        setField(id, value, fromExif, hasNoise);
         redraw();
+      }
+
+      const canNativeShare = !!(navigator.share && navigator.canShare);
+
+      function updateShareUI() {
+        const note = document.getElementById("share-note");
+        if (canNativeShare) {
+          document.getElementById("share-label").textContent =
+            "Share All to WhatsApp / other";
+          note.textContent =
+            "Opens your share sheet — pick WhatsApp, then choose a contact";
+        } else {
+          document.getElementById("share-label").textContent =
+            "Download All & Open WhatsApp";
+          note.textContent =
+            "Creates ZIP file with all photos, then opens WhatsApp Web";
+        }
+      }
+
+      function redraw() {
+        const stamp = imageStamps[currentImageIndex];
+        if (!stamp || !stamp.imgDataURL) return;
+
+        const canvas = document.getElementById("preview-canvas");
+        const ctx = canvas.getContext("2d");
+        const img = new Image();
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+
+          const corner = document.querySelector(
+            'input[name="corner"]:checked',
+          ).value;
+          const fsizeKey = document.querySelector(
+            'input[name="fsize"]:checked',
+          ).value;
+
+          const lat = document.getElementById("f-lat").value.trim();
+          const lon = document.getElementById("f-lon").value.trim();
+          const ele = document.getElementById("f-ele").value.trim();
+          const acc = document.getElementById("f-acc").value.trim();
+          const dt = document.getElementById("f-dt").value.trim();
+
+          const lines = [];
+          if (lat) lines.push(`Latitude: ${lat}`);
+          if (lon) lines.push(`Longitude: ${lon}`);
+          if (ele) lines.push(`Elevation: ${ele}`);
+          if (acc) lines.push(`Accuracy: ${acc}`);
+          if (dt) lines.push(`Time: ${dt}`);
+          if (!lines.length) return;
+
+          const base = { small: 18, medium: 26, large: 36 }[fsizeKey];
+          const scale = img.width / 1000;
+          const fs = Math.round(base * Math.max(scale, 0.6));
+          const pad = Math.round(fs * 0.7);
+          const lineH = Math.round(fs * 1.55);
+
+          ctx.font = `${fs}px monospace`;
+          const maxW = lines.reduce(
+            (m, l) => Math.max(m, ctx.measureText(l).width),
+            0,
+          );
+          const boxW = maxW + pad * 2;
+          const boxH = lines.length * lineH + pad;
+
+          let bx, by;
+          if (corner === "bl") {
+            bx = 0;
+            by = img.height - boxH;
+          } else if (corner === "br") {
+            bx = img.width - boxW;
+            by = img.height - boxH;
+          } else if (corner === "tl") {
+            bx = 0;
+            by = 0;
+          } else {
+            bx = img.width - boxW;
+            by = 0;
+          }
+
+          ctx.fillStyle = "rgba(255, 255, 255, 0.68)";
+          ctx.fillRect(bx, by, boxW, boxH);
+
+          ctx.fillStyle = "#000000";
+          ctx.font = `${fs}px monospace`;
+          lines.forEach((line, i) => {
+            ctx.fillText(line, bx + pad, by + pad * 0.75 + fs + i * lineH);
+          });
+        };
+        img.src = stamp.imgDataURL;
+      }
+
+      function getStampedFileFromIndex(idx) {
+        return new Promise((resolve, reject) => {
+          const stamp = imageStamps[idx];
+          if (!stamp) {
+            reject(new Error("Image not found"));
+            return;
+          }
+
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          const img = new Image();
+
+          img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            // Draw stamp using current field values from this image's state
+            const corner = document.querySelector(
+              'input[name="corner"]:checked',
+            ).value;
+            const fsizeKey = document.querySelector(
+              'input[name="fsize"]:checked',
+            ).value;
+
+            // For batch, use the metadata values stored in each stamp
+            const metadata = stamp.metadata;
+            const lat = metadata.lat.displayValue || "";
+            const lon = metadata.lon.displayValue || "";
+            const ele = metadata.ele.displayValue || "";
+            const acc = metadata.acc.displayValue || "";
+            const dt = metadata.dt.displayValue || "";
+
+            const lines = [];
+            if (lat) lines.push(`Latitude: ${lat}`);
+            if (lon) lines.push(`Longitude: ${lon}`);
+            if (ele) lines.push(`Elevation: ${ele}`);
+            if (acc) lines.push(`Accuracy: ${acc}`);
+            if (dt) lines.push(`Time: ${dt}`);
+
+            if (lines.length > 0) {
+              const base = { small: 18, medium: 26, large: 36 }[fsizeKey];
+              const scale = img.width / 1000;
+              const fs = Math.round(base * Math.max(scale, 0.6));
+              const pad = Math.round(fs * 0.7);
+              const lineH = Math.round(fs * 1.55);
+
+              ctx.font = `${fs}px monospace`;
+              const maxW = lines.reduce(
+                (m, l) => Math.max(m, ctx.measureText(l).width),
+                0,
+              );
+              const boxW = maxW + pad * 2;
+              const boxH = lines.length * lineH + pad;
+
+              let bx, by;
+              if (corner === "bl") {
+                bx = 0;
+                by = img.height - boxH;
+              } else if (corner === "br") {
+                bx = img.width - boxW;
+                by = img.height - boxH;
+              } else if (corner === "tl") {
+                bx = 0;
+                by = 0;
+              } else {
+                bx = img.width - boxW;
+                by = 0;
+              }
+
+              ctx.fillStyle = "rgba(255, 255, 255, 0.68)";
+              ctx.fillRect(bx, by, boxW, boxH);
+
+              ctx.fillStyle = "#000000";
+              ctx.font = `${fs}px monospace`;
+              lines.forEach((line, i) => {
+                ctx.fillText(line, bx + pad, by + pad * 0.75 + fs + i * lineH);
+              });
+            }
+
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error("Canvas empty"));
+                  return;
+                }
+                const file = new File([blob], stamp.filename, {
+                  type: "image/jpeg",
+                });
+                resolve(file);
+              },
+              "image/jpeg",
+              0.95,
+            );
+          };
+          img.src = stamp.imgDataURL;
+        });
+      }
+
+      function selectImage(idx) {
+        if (idx < 0 || idx >= imageStamps.length) return;
+
+        // Update field values from selected image
+        currentImageIndex = idx;
+        const stamp = imageStamps[idx];
+        const metadata = stamp.metadata;
+
+        setField(
+          "f-lat",
+          metadata.lat.displayValue,
+          metadata.lat.fromExif,
+          metadata.lat.hasNoise,
+        );
+        setField(
+          "f-lon",
+          metadata.lon.displayValue,
+          metadata.lon.fromExif,
+          metadata.lon.hasNoise,
+        );
+        setField(
+          "f-ele",
+          metadata.ele.displayValue,
+          metadata.ele.fromExif,
+          metadata.ele.hasNoise,
+        );
+        setField(
+          "f-acc",
+          metadata.acc.displayValue,
+          metadata.acc.fromExif,
+          metadata.acc.hasNoise,
+        );
+        setField(
+          "f-dt",
+          metadata.dt.displayValue,
+          metadata.dt.fromExif,
+          metadata.dt.hasNoise,
+        );
+
+        // Update gallery UI
+        document.querySelectorAll(".thumb").forEach((t, i) => {
+          t.classList.toggle("selected", i === idx);
+        });
+
+        document.getElementById("image-indicator").textContent =
+          `${idx + 1}/${imageStamps.length}`;
+        document.getElementById("prev-btn").disabled = idx === 0;
+        document.getElementById("next-btn").disabled =
+          idx === imageStamps.length - 1;
+
+        redraw();
+      }
+
+      function prevImage() {
+        if (currentImageIndex > 0) selectImage(currentImageIndex - 1);
+      }
+
+      function nextImage() {
+        if (currentImageIndex < imageStamps.length - 1)
+          selectImage(currentImageIndex + 1);
+      }
+
+      function updateGallery() {
+        const thumbsContainer = document.getElementById("gallery-thumbs");
+        thumbsContainer.innerHTML = "";
+
+        imageStamps.forEach((stamp, idx) => {
+          const thumb = document.createElement("div");
+          thumb.className =
+            "thumb" + (idx === currentImageIndex ? " selected" : "");
+
+          const img = document.createElement("img");
+          img.src = stamp.imgDataURL;
+          thumb.appendChild(img);
+          thumb.onclick = () => selectImage(idx);
+
+          thumbsContainer.appendChild(thumb);
+        });
+      }
+
+      async function processMultipleImages(files) {
+        document.getElementById("processing").style.display = "block";
+        imageStamps = [];
+
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (!file.type.startsWith("image/")) continue;
+
+          document.getElementById("process-count").textContent =
+            `${i + 1}/${files.length}`;
+
+          const stamp = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const imgDataURL = e.target.result;
+              const filename =
+                file.name.replace(/\.[^.]+$/, "") + "_stamped.jpg";
+
+              const tmpImg = new Image();
+              tmpImg.onload = () => {
+                EXIF.getData(tmpImg, function () {
+                  const tags = EXIF.getAllTags(this);
+
+                  const metadata = {};
+
+                  // Latitude
+                  const lat = dms(tags.GPSLatitude, tags.GPSLatitudeRef);
+                  if (lat != null) {
+                    metadata.lat = {
+                      value: lat.toFixed(6),
+                      displayValue: lat.toFixed(6),
+                      fromExif: true,
+                      hasNoise: false,
+                    };
+                  } else {
+                    const noiseLat = generateNoise("location");
+                    const noiseLatValue = parseFloat(DEFAULTS.lat) + noiseLat;
+                    metadata.lat = {
+                      value: DEFAULTS.lat,
+                      displayValue: noiseLatValue.toFixed(6),
+                      fromExif: false,
+                      hasNoise: true,
+                    };
+                  }
+
+                  // Longitude
+                  const lon = dms(tags.GPSLongitude, tags.GPSLongitudeRef);
+                  if (lon != null) {
+                    metadata.lon = {
+                      value: lon.toFixed(6),
+                      displayValue: lon.toFixed(6),
+                      fromExif: true,
+                      hasNoise: false,
+                    };
+                  } else {
+                    const noiseLon = generateNoise("location");
+                    const noiseLonValue = parseFloat(DEFAULTS.lon) + noiseLon;
+                    metadata.lon = {
+                      value: DEFAULTS.lon,
+                      displayValue: noiseLonValue.toFixed(6),
+                      fromExif: false,
+                      hasNoise: true,
+                    };
+                  }
+
+                  // Elevation
+                  const eleRaw = tags.GPSAltitude;
+                  if (eleRaw != null) {
+                    const eleVal =
+                      typeof eleRaw === "object"
+                        ? eleRaw.numerator / eleRaw.denominator
+                        : eleRaw;
+                    const eleStr = eleVal.toFixed(2) + "±77.27 m";
+                    metadata.ele = {
+                      value: eleStr,
+                      displayValue: eleStr,
+                      fromExif: true,
+                      hasNoise: false,
+                    };
+                  } else {
+                    metadata.ele = {
+                      value: DEFAULTS.ele,
+                      displayValue: DEFAULTS.ele,
+                      fromExif: false,
+                      hasNoise: false,
+                    };
+                  }
+
+                  // Accuracy
+                  const hpe = tags.GPSHPositioningError || tags.GPSDop;
+                  if (hpe != null) {
+                    const hpeVal =
+                      typeof hpe === "object"
+                        ? hpe.numerator / hpe.denominator
+                        : hpe;
+                    const hpeStr = hpeVal.toFixed(2) + " m";
+                    metadata.acc = {
+                      value: hpeStr,
+                      displayValue: hpeStr,
+                      fromExif: true,
+                      hasNoise: false,
+                    };
+                  } else {
+                    metadata.acc = {
+                      value: DEFAULTS.acc,
+                      displayValue: DEFAULTS.acc,
+                      fromExif: false,
+                      hasNoise: false,
+                    };
+                  }
+
+                  // DateTime
+                  const dt = parseDate(tags.DateTimeOriginal || tags.DateTime);
+                  if (dt) {
+                    metadata.dt = {
+                      value: dt,
+                      displayValue: dt,
+                      fromExif: true,
+                      hasNoise: false,
+                    };
+                  } else {
+                    const noiseSeconds = generateNoise("time");
+                    const noiseDt = applyTimeNoise(DEFAULTS.dt, noiseSeconds);
+                    metadata.dt = {
+                      value: DEFAULTS.dt,
+                      displayValue: noiseDt,
+                      fromExif: false,
+                      hasNoise: true,
+                    };
+                  }
+
+                  resolve({
+                    file,
+                    filename,
+                    imgDataURL,
+                    metadata,
+                  });
+                });
+              };
+              tmpImg.src = imgDataURL;
+            };
+            reader.readAsDataURL(file);
+          });
+
+          imageStamps.push(stamp);
+        }
+
+        document.getElementById("processing").style.display = "none";
+
+        if (imageStamps.length > 0) {
+          document.getElementById("file-count").textContent =
+            `${imageStamps.length} image${imageStamps.length !== 1 ? "s" : ""}`;
+          document.getElementById("file-count").style.display = "inline-block";
+          document.getElementById("panel").style.display = "block";
+          selectImage(0);
+          updateGallery();
+          updateShareUI();
+        }
+      }
+
+      document.getElementById("file-input").addEventListener("change", (e) => {
+        processMultipleImages(Array.from(e.target.files));
+        e.target.value = "";
       });
-    };
-    tmpImg.src = imgDataURL;
-  };
-  reader.readAsDataURL(file);
-}
 
-document.getElementById('file-input').addEventListener('change', e => handleFile(e.target.files[0]));
-
-const dz = document.getElementById('drop-zone');
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
-dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
-
-document.querySelectorAll('input[name="corner"], input[name="fsize"]').forEach(el => el.addEventListener('change', redraw));
-['f-lat','f-lon','f-ele','f-acc','f-dt'].forEach(id => {
-  document.getElementById(id).addEventListener('input', redraw);
-});
-
-// Download
-document.getElementById('download-btn').addEventListener('click', () => {
-  const canvas = document.getElementById('preview-canvas');
-  canvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = currentFilename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }, 'image/jpeg', 0.95);
-});
-
-// Share — mobile: native share sheet | desktop: download + open WhatsApp Web
-document.getElementById('share-btn').addEventListener('click', async () => {
-  const btn = document.getElementById('share-btn');
-  btn.disabled = true;
-  document.getElementById('share-label').textContent = 'Preparing…';
-
-  try {
-    if (canNativeShare) {
-      // Mobile path — native share sheet
-      const file = await getStampedFile();
-      const shareData = { files: [file] };
-      if (!navigator.canShare(shareData)) throw new Error('Cannot share files');
-      await navigator.share(shareData);
-    } else {
-      // Desktop path — download file, then open WhatsApp Web
-      const canvas = document.getElementById('preview-canvas');
-      await new Promise((resolve, reject) => {
-        canvas.toBlob(blob => {
-          if (!blob) { reject(new Error('Canvas empty')); return; }
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = currentFilename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 1500);
-          resolve();
-        }, 'image/jpeg', 0.95);
+      const dz = document.getElementById("drop-zone");
+      dz.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dz.classList.add("drag");
       });
-      // Small delay so download starts before tab opens
-      await new Promise(r => setTimeout(r, 600));
-      window.open('https://web.whatsapp.com', '_blank');
-    }
-  } catch (err) {
-    if (err.name !== 'AbortError') {
-      alert('Something went wrong. Use the Download button and share manually.');
-    }
-  } finally {
-    btn.disabled = false;
-    updateShareUI();
-  }
-});
-</script>
-</body>
+      dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
+      dz.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dz.classList.remove("drag");
+        processMultipleImages(Array.from(e.dataTransfer.files));
+      });
+
+      document
+        .querySelectorAll('input[name="corner"], input[name="fsize"]')
+        .forEach((el) => el.addEventListener("change", redraw));
+
+      ["f-lat", "f-lon", "f-ele", "f-acc", "f-dt"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", (e) => {
+          const stamp = imageStamps[currentImageIndex];
+          if (stamp) {
+            const fieldKey = id.substring(2);
+            const keyMap = {
+              lat: "lat",
+              lon: "lon",
+              ele: "ele",
+              acc: "acc",
+              dt: "dt",
+            };
+            const key = keyMap[fieldKey];
+            if (key) {
+              stamp.metadata[key].displayValue = e.target.value;
+            }
+          }
+          redraw();
+        });
+      });
+
+      // Download single image
+      document.getElementById("download-btn").addEventListener("click", () => {
+        const stamp = imageStamps[currentImageIndex];
+        if (!stamp) return;
+
+        const canvas = document.getElementById("preview-canvas");
+        canvas.toBlob(
+          (blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = stamp.filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          },
+          "image/jpeg",
+          0.95,
+        );
+      });
+
+      // Download all as ZIP
+      document
+        .getElementById("download-all-btn")
+        .addEventListener("click", async () => {
+          const btn = document.getElementById("download-all-btn");
+          btn.disabled = true;
+          btn.textContent = "⬇ Creating ZIP...";
+
+          try {
+            const zip = new JSZip();
+
+            for (let i = 0; i < imageStamps.length; i++) {
+              const file = await getStampedFileFromIndex(i);
+              zip.file(file.name, file);
+            }
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `stamped_batch_${new Date().toISOString().split("T")[0]}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          } catch (err) {
+            alert("Failed to create ZIP: " + err.message);
+          } finally {
+            btn.disabled = false;
+            btn.textContent = "⬇ Download All";
+          }
+        });
+
+      // Share all to WhatsApp
+      document
+        .getElementById("share-btn")
+        .addEventListener("click", async () => {
+          const btn = document.getElementById("share-btn");
+          btn.disabled = true;
+          document.getElementById("share-label").textContent = "Preparing…";
+
+          try {
+            if (canNativeShare) {
+              // Mobile path — try native share with all files
+              const files = [];
+              for (let i = 0; i < imageStamps.length; i++) {
+                files.push(await getStampedFileFromIndex(i));
+              }
+
+              const shareData = { files };
+              if (!navigator.canShare(shareData)) {
+                // Fallback to ZIP if multiple files not supported
+                throw new Error("Cannot share multiple files natively");
+              }
+              await navigator.share(shareData);
+            } else {
+              // Desktop path — create ZIP and open WhatsApp Web
+              const zip = new JSZip();
+              for (let i = 0; i < imageStamps.length; i++) {
+                const file = await getStampedFileFromIndex(i);
+                zip.file(file.name, file);
+              }
+
+              const content = await zip.generateAsync({ type: "blob" });
+              const url = URL.createObjectURL(content);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `stamped_batch_${new Date().toISOString().split("T")[0]}.zip`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+
+              setTimeout(() => {
+                URL.revokeObjectURL(url);
+                window.open("https://web.whatsapp.com", "_blank");
+              }, 1000);
+            }
+          } catch (err) {
+            if (err.name !== "AbortError") {
+              alert("Share failed. Use Download All and upload manually.");
+            }
+          } finally {
+            btn.disabled = false;
+            updateShareUI();
+          }
+        });
+
+      // Clear all
+      document.getElementById("clear-btn").addEventListener("click", () => {
+        if (confirm("Clear all images and reset?")) {
+          imageStamps = [];
+          currentImageIndex = 0;
+          document.getElementById("panel").style.display = "none";
+          document.getElementById("file-count").style.display = "none";
+          document.getElementById("file-input").value = "";
+        }
+      });
+    </script>
+  </body>
 </html>
