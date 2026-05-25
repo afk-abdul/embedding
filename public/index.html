@@ -125,20 +125,32 @@
   }
   #preview-canvas { max-width: 100%; display: block; }
 
-  #download-btn {
+  .btn {
     width: 100%;
     padding: 0.8rem;
     font-size: 0.9rem;
     font-weight: 600;
     letter-spacing: 0.04em;
-    background: #fff;
-    color: #111;
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: opacity 0.15s;
+    margin-bottom: 0.6rem;
+    display: block;
   }
-  #download-btn:hover { background: #ddd; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-white { background: #fff; color: #111; }
+  .btn-white:not(:disabled):hover { background: #ddd; }
+  .btn-whatsapp { background: #25D366; color: #fff; }
+  .btn-whatsapp:not(:disabled):hover { background: #1ebe5d; }
+  .btn-note {
+    font-size: 0.7rem;
+    color: #444;
+    text-align: center;
+    margin-top: -0.3rem;
+    margin-bottom: 0.6rem;
+  }
+
   #panel { display: none; }
 </style>
 </head>
@@ -159,7 +171,6 @@
 
 <div id="panel">
 
-  <!-- Editable metrics -->
   <div class="section">
     <div class="section-title">
       Stamp fields — edit if needed
@@ -193,7 +204,6 @@
     </div>
   </div>
 
-  <!-- Position & size -->
   <div class="section">
     <div class="section-title">Position</div>
     <div class="opts" style="margin-bottom: 0.75rem;">
@@ -214,11 +224,16 @@
     <canvas id="preview-canvas"></canvas>
   </div>
 
-  <button id="download-btn">⬇ Download Stamped Photo</button>
+  <button class="btn btn-white" id="download-btn">⬇ Download Stamped Photo</button>
+  <button class="btn btn-whatsapp" id="share-btn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px; margin-right:6px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.534 5.858L.057 23.448a.5.5 0 00.609.61l5.703-1.498A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22a9.955 9.955 0 01-5.127-1.416l-.368-.219-3.818 1.003 1.018-3.714-.24-.381A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+    <span id="share-label">Share via WhatsApp</span>
+  </button>
+  <p class="btn-note" id="share-note"></p>
+
 </div>
 
 <script>
-// Default fallback values from reference image
 function getNowStamp() {
   const n = new Date();
   const mm = String(n.getMonth()+1).padStart(2,'0');
@@ -229,6 +244,7 @@ function getNowStamp() {
   const ss = String(n.getSeconds()).padStart(2,'0');
   return `${mm}-${dd}-${yyyy} ${hh}:${min}:${ss}`;
 }
+
 const DEFAULTS = {
   lat: '34.112833',
   lon: '72.515528',
@@ -238,6 +254,7 @@ const DEFAULTS = {
 };
 
 let imgDataURL = null;
+let currentFilename = 'stamped.jpg';
 
 function dms(arr, ref) {
   if (!arr || arr.length < 3) return null;
@@ -259,6 +276,20 @@ function setField(id, value, fromExif) {
   el.value = value;
   el.classList.remove('from-exif', 'fallback');
   el.classList.add(fromExif ? 'from-exif' : 'fallback');
+}
+
+// Detect mobile vs desktop share capability
+const canNativeShare = !!(navigator.share && navigator.canShare);
+
+function updateShareUI() {
+  const note = document.getElementById('share-note');
+  if (canNativeShare) {
+    document.getElementById('share-label').textContent = 'Share via WhatsApp / other';
+    note.textContent = 'Opens your share sheet — pick WhatsApp, then choose a contact';
+  } else {
+    document.getElementById('share-label').textContent = 'Download + Open WhatsApp Web';
+    note.textContent = 'Saves the photo, then opens WhatsApp Web — drag the file into any chat';
+  }
 }
 
 function redraw() {
@@ -300,17 +331,14 @@ function redraw() {
     const boxH = lines.length * lineH + pad;
 
     let bx, by;
-    const margin = pad;
     if (corner === 'bl') { bx = 0; by = img.height - boxH; }
     else if (corner === 'br') { bx = img.width - boxW; by = img.height - boxH; }
     else if (corner === 'tl') { bx = 0; by = 0; }
     else { bx = img.width - boxW; by = 0; }
 
-    // Beige background at 10% opacity
-ctx.fillStyle = 'rgba(255, 255, 255, 0.68)';
-ctx.fillRect(bx, by, boxW, boxH);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.68)';
+    ctx.fillRect(bx, by, boxW, boxH);
 
-    // Black text
     ctx.fillStyle = '#000000';
     ctx.font = `${fs}px monospace`;
     lines.forEach((line, i) => {
@@ -320,13 +348,25 @@ ctx.fillRect(bx, by, boxW, boxH);
   img.src = imgDataURL;
 }
 
+// Returns a promise resolving to a File object from the canvas
+function getStampedFile() {
+  return new Promise((resolve, reject) => {
+    const canvas = document.getElementById('preview-canvas');
+    canvas.toBlob(blob => {
+      if (!blob) { reject(new Error('Canvas empty')); return; }
+      const file = new File([blob], currentFilename, { type: 'image/jpeg' });
+      resolve(file);
+    }, 'image/jpeg', 0.95);
+  });
+}
+
 function handleFile(file) {
   if (!file || !file.type.startsWith('image/')) return;
+  currentFilename = file.name.replace(/\.[^.]+$/, '') + '_stamped.jpg';
   const reader = new FileReader();
   reader.onload = e => {
     imgDataURL = e.target.result;
 
-    // Reset all fields to fallback first
     setField('f-lat', DEFAULTS.lat, false);
     setField('f-lon', DEFAULTS.lon, false);
     setField('f-ele', DEFAULTS.ele, false);
@@ -359,6 +399,7 @@ function handleFile(file) {
         if (dt) setField('f-dt', dt, true);
 
         document.getElementById('panel').style.display = 'block';
+        updateShareUI();
         redraw();
       });
     };
@@ -374,24 +415,68 @@ dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dra
 dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
 dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
 
-// Redraw on any option or field change
 document.querySelectorAll('input[name="corner"], input[name="fsize"]').forEach(el => el.addEventListener('change', redraw));
 ['f-lat','f-lon','f-ele','f-acc','f-dt'].forEach(id => {
   document.getElementById(id).addEventListener('input', redraw);
 });
 
+// Download
 document.getElementById('download-btn').addEventListener('click', () => {
   const canvas = document.getElementById('preview-canvas');
   canvas.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'stamped.jpg';
+    a.download = currentFilename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, 'image/jpeg', 0.95);
+});
+
+// Share — mobile: native share sheet | desktop: download + open WhatsApp Web
+document.getElementById('share-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('share-btn');
+  btn.disabled = true;
+  document.getElementById('share-label').textContent = 'Preparing…';
+
+  try {
+    if (canNativeShare) {
+      // Mobile path — native share sheet
+      const file = await getStampedFile();
+      const shareData = { files: [file] };
+      if (!navigator.canShare(shareData)) throw new Error('Cannot share files');
+      await navigator.share(shareData);
+    } else {
+      // Desktop path — download file, then open WhatsApp Web
+      const canvas = document.getElementById('preview-canvas');
+      await new Promise((resolve, reject) => {
+        canvas.toBlob(blob => {
+          if (!blob) { reject(new Error('Canvas empty')); return; }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = currentFilename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+          resolve();
+        }, 'image/jpeg', 0.95);
+      });
+      // Small delay so download starts before tab opens
+      await new Promise(r => setTimeout(r, 600));
+      window.open('https://web.whatsapp.com', '_blank');
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      alert('Something went wrong. Use the Download button and share manually.');
+    }
+  } finally {
+    btn.disabled = false;
+    updateShareUI();
+  }
 });
 </script>
 </body>
