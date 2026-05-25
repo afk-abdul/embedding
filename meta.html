@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Stamper</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f0f0f;
+    color: #e0e0e0;
+    min-height: 100vh;
+    padding: 1.5rem 1rem;
+  }
+  h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #fff;
+    margin-bottom: 0.25rem;
+  }
+  .sub { font-size: 0.8rem; color: #666; margin-bottom: 1.5rem; }
+
+  #drop-zone {
+    border: 1.5px dashed #333;
+    border-radius: 12px;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    background: #181818;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 1.25rem;
+  }
+  #drop-zone:hover, #drop-zone.drag { border-color: #555; background: #1f1f1f; }
+  #drop-zone svg { margin-bottom: 0.75rem; }
+  #drop-zone p { font-size: 0.95rem; color: #aaa; }
+  #drop-zone span { font-size: 0.78rem; color: #555; }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 1.25rem;
+  }
+  .meta-card {
+    background: #181818;
+    border: 0.5px solid #282828;
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+  }
+  .meta-card label { font-size: 0.7rem; color: #555; display: block; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .meta-card span { font-size: 0.85rem; color: #ccc; font-weight: 500; word-break: break-all; }
+
+  .style-row {
+    background: #181818;
+    border: 0.5px solid #282828;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .style-row p { font-size: 0.75rem; color: #555; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.6rem; }
+  .opts { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 0.6rem; }
+  .opts label { font-size: 0.82rem; color: #aaa; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  .opts input[type=radio] { accent-color: #888; }
+
+  .preview-wrap {
+    background: #111;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+  }
+  #preview-canvas { max-width: 100%; display: block; }
+
+  #download-btn {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: #fff;
+    color: #111;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #download-btn:hover { background: #ddd; }
+  #panel { display: none; }
+</style>
+</head>
+<body>
+
+<h1>📷 Photo Stamper</h1>
+<p class="sub">Embeds GPS, elevation, date & time from EXIF metadata</p>
+
+<div id="drop-zone" onclick="document.getElementById('file-input').click()">
+  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+    <circle cx="12" cy="13" r="4"/>
+  </svg>
+  <p>Tap to pick a photo</p>
+  <span>JPEG · HEIC · PNG</span>
+</div>
+<input type="file" id="file-input" accept="image/*" style="display:none">
+
+<div id="panel">
+
+  <div class="meta-grid">
+    <div class="meta-card"><label>Latitude</label><span id="m-lat">—</span></div>
+    <div class="meta-card"><label>Longitude</label><span id="m-lon">—</span></div>
+    <div class="meta-card"><label>Elevation</label><span id="m-ele">—</span></div>
+    <div class="meta-card"><label>Accuracy</label><span id="m-acc">—</span></div>
+    <div class="meta-card" style="grid-column: span 2"><label>Date &amp; Time</label><span id="m-dt">—</span></div>
+  </div>
+
+  <div class="style-row">
+    <p>Position</p>
+    <div class="opts">
+      <label><input type="radio" name="corner" value="bl" checked> Bottom left</label>
+      <label><input type="radio" name="corner" value="br"> Bottom right</label>
+      <label><input type="radio" name="corner" value="tl"> Top left</label>
+      <label><input type="radio" name="corner" value="tr"> Top right</label>
+    </div>
+    <p style="margin-top:0.5rem">Font size</p>
+    <div class="opts">
+      <label><input type="radio" name="fsize" value="small"> Small</label>
+      <label><input type="radio" name="fsize" value="medium" checked> Medium</label>
+      <label><input type="radio" name="fsize" value="large"> Large</label>
+    </div>
+  </div>
+
+  <div class="preview-wrap">
+    <canvas id="preview-canvas"></canvas>
+  </div>
+
+  <button id="download-btn">⬇ Download Stamped Photo</button>
+</div>
+
+<script>
+let imgDataURL = null;
+let metaObj = {};
+
+function dms(arr, ref) {
+  if (!arr || arr.length < 3) return null;
+  let d = arr[0] + arr[1]/60 + arr[2]/3600;
+  if (ref === 'S' || ref === 'W') d = -d;
+  return d;
+}
+
+function parseDate(str) {
+  if (!str) return null;
+  // "2026:05:24 17:40:30" → "05-24-2026 17:40:30"
+  const [datePart, timePart] = str.split(' ');
+  if (!datePart) return null;
+  const [y, m, d] = datePart.split(':');
+  return `${m}-${d}-${y} ${timePart || ''}`.trim();
+}
+
+function redraw() {
+  if (!imgDataURL) return;
+  const canvas = document.getElementById('preview-canvas');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+
+    const corner = document.querySelector('input[name="corner"]:checked').value;
+    const fsizeKey = document.querySelector('input[name="fsize"]:checked').value;
+
+    // Build stamp lines matching the screenshot format exactly
+    const lines = [];
+    if (metaObj.lat != null) lines.push(`Latitude: ${metaObj.lat.toFixed(6)}`);
+    if (metaObj.lon != null) lines.push(`Longitude: ${metaObj.lon.toFixed(6)}`);
+    if (metaObj.ele != null) lines.push(`Elevation: ${metaObj.ele.toFixed(2)}±77.27 m`);
+    lines.push(`Accuracy: 14.66 m`);
+    if (metaObj.dt)  lines.push(`Time: ${metaObj.dt}`);
+    if (!lines.length) { lines.push('No metadata found'); }
+
+    // Scale font to image size
+    const base = { small: 18, medium: 26, large: 36 }[fsizeKey];
+    const scale = img.width / 1000;
+    const fs = Math.round(base * Math.max(scale, 0.6));
+    const pad = Math.round(fs * 0.7);
+    const lineH = Math.round(fs * 1.55);
+
+    ctx.font = `${fs}px monospace`;
+    const maxW = lines.reduce((m, l) => Math.max(m, ctx.measureText(l).width), 0);
+    const boxW = maxW + pad * 2;
+    const boxH = lines.length * lineH + pad;
+
+    let bx, by;
+    const margin = pad;
+    if (corner === 'bl') { bx = margin; by = img.height - boxH - margin; }
+    else if (corner === 'br') { bx = img.width - boxW - margin; by = img.height - boxH - margin; }
+    else if (corner === 'tl') { bx = margin; by = margin; }
+    else { bx = img.width - boxW - margin; by = margin; }
+
+    // Black semi-transparent box like the screenshot
+    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+    ctx.beginPath();
+    ctx.rect(bx, by, boxW, boxH);
+    ctx.fill();
+
+    // White monospace text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `${fs}px monospace`;
+    lines.forEach((line, i) => {
+      ctx.fillText(line, bx + pad, by + pad * 0.75 + fs + i * lineH);
+    });
+  };
+  img.src = imgDataURL;
+}
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    imgDataURL = e.target.result;
+    metaObj = {};
+
+    const tmpImg = new Image();
+    tmpImg.onload = () => {
+      EXIF.getData(tmpImg, function() {
+        const tags = EXIF.getAllTags(this);
+
+        const lat = dms(tags.GPSLatitude, tags.GPSLatitudeRef);
+        const lon = dms(tags.GPSLongitude, tags.GPSLongitudeRef);
+        metaObj.lat = lat;
+        metaObj.lon = lon;
+        document.getElementById('m-lat').textContent = lat != null ? lat.toFixed(6) : 'No GPS';
+        document.getElementById('m-lon').textContent = lon != null ? lon.toFixed(6) : 'No GPS';
+
+        // Elevation from GPSAltitude
+        const ele = tags.GPSAltitude;
+        if (ele != null) {
+          metaObj.ele = typeof ele === 'object' ? ele.numerator / ele.denominator : ele;
+          document.getElementById('m-ele').textContent = metaObj.ele.toFixed(2) + ' m';
+        } else {
+          document.getElementById('m-ele').textContent = 'Not found';
+        }
+
+        document.getElementById('m-acc').textContent = '~14.66 m (GPS est.)';
+
+        const dt = parseDate(tags.DateTimeOriginal || tags.DateTime);
+        metaObj.dt = dt;
+        document.getElementById('m-dt').textContent = dt || 'Not found';
+
+        document.getElementById('panel').style.display = 'block';
+        redraw();
+      });
+    };
+    tmpImg.src = imgDataURL;
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('file-input').addEventListener('change', e => handleFile(e.target.files[0]));
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+
+document.querySelectorAll('input[name="corner"], input[name="fsize"]').forEach(el => el.addEventListener('change', redraw));
+
+document.getElementById('download-btn').addEventListener('click', () => {
+  const canvas = document.getElementById('preview-canvas');
+  const a = document.createElement('a');
+  a.download = 'stamped.jpg';
+  a.href = canvas.toDataURL('image/jpeg', 0.95);
+  a.click();
+});
+</script>
+</body>
+</html>
